@@ -1,29 +1,29 @@
-FROM alpine:3.20
-# Latest stable with ARM64 support
+FROM alpine:3.19
+# Base image with ARM64 support and all required packages available
 
-# Install dependencies (all available on aarch64)
+# Install dependencies: mongodb-tools (includes mongodump), aws-cli, dcron, bash
 RUN apk update && \
     apk add --no-cache \
-        mongodb-database-tools=100.9.4-r0 \  # Latest mongodump/mongorestore
-        aws-cli=2.17.20-r0 \                 # Latest AWS CLI v2 (ARM-native)
-        dcron=1.5.3-r0 \                     # Lightweight cron
-        bash=5.2.26-r0 && \
+        mongodb-tools \
+        aws-cli \
+        dcron \
+        bash && \
     rm -rf /var/cache/apk/* && \
     mkdir -p /etc/cron.d /var/log
 
-# Copy script
+# Copy the backup script
 COPY backup.sh /usr/local/bin/backup.sh
 RUN chmod +x /usr/local/bin/backup.sh
 
-# Cron job: Daily at 2 AM UTC (edit for your needs)
+# Set up cron job: Daily at 2 AM UTC (logs to file)
 RUN echo "0 2 * * * /usr/local/bin/backup.sh >/var/log/backup-cron.log 2>&1" > /etc/cron.d/backup-cron && \
     chmod 0644 /etc/cron.d/backup-cron
 
-# Expose logs (optional, for Coolify volume mount)
+# Optional: Persistent logs volume for Coolify
 VOLUME ["/var/log"]
 
-# Health check: Verify tools
+# Health check: Verify key tools are installed
 HEALTHCHECK --interval=1h --timeout=10s CMD mongodump --version && aws --version || exit 1
 
-# Start cron
+# Start the cron daemon in foreground
 CMD ["crond", "-f", "-l", "2"]
