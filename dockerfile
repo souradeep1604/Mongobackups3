@@ -1,4 +1,5 @@
-FROM alpine:3.20  # Latest stable with ARM64 support
+FROM alpine:3.20
+# Latest stable with ARM64 support
 
 # Install dependencies (all available on aarch64)
 RUN apk update && \
